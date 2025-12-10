@@ -405,6 +405,7 @@
         // Store rates for comparison
         let lastRates = {};
         let currentRates = {};
+        let autoRefreshInterval;
 
         function formatCurrency(amount, currencyCode) {
             switch(currencyCode) {
@@ -443,59 +444,50 @@
             return `${percentage > 0 ? '+' : ''}${percentage.toFixed(2)}%`;
         }
 
+        function generateRandomRate(baseRate) {
+            // Generate small random change (±0.1% to ±0.5%)
+            const change = (Math.random() * 0.008) - 0.004;
+            return baseRate * (1 + change);
+        }
+
         async function fetchExchangeRates(baseCurrency) {
             try {
                 // This calls YOUR Netlify function
                 const response = await fetch(`/.netlify/functions/get-rates?base=${baseCurrency}`);
                 const data = await response.json();
                 
-                // If API fails, use fallback
-                if (data.fallback) {
+                // If API fails, use fallback with random changes
+                if (data.fallback || !data.conversion_rates) {
                     throw new Error('Using fallback');
                 }
                 
                 return data.conversion_rates;
             } catch (error) {
-                console.log('Using fallback demo rates');
-                // Fallback to demo rates with small random changes
-                const demoRates = {
-                    SGD: { 
-                        MYR: 3.1807 + (Math.random() * 0.01 - 0.005), 
-                        IDR: 11286.57 + (Math.random() * 10 - 5),
-                        SAR: 2.79 + (Math.random() * 0.01 - 0.005),
-                        USD: 0.74 + (Math.random() * 0.01 - 0.005),
-                        SGD: 1 
-                    },
-                    MYR: { 
-                        SGD: 0.3145 + (Math.random() * 0.001 - 0.0005), 
-                        IDR: 3560.25 + (Math.random() * 5 - 2.5),
-                        SAR: 0.88 + (Math.random() * 0.005 - 0.0025),
-                        USD: 0.234 + (Math.random() * 0.005 - 0.0025),
-                        MYR: 1 
-                    },
-                    IDR: { 
-                        SGD: 0.0000886 + (Math.random() * 0.000001 - 0.0000005), 
-                        MYR: 0.000281 + (Math.random() * 0.000001 - 0.0000005),
-                        SAR: 0.000247 + (Math.random() * 0.000001 - 0.0000005),
-                        USD: 0.000066 + (Math.random() * 0.000001 - 0.0000005),
-                        IDR: 1 
-                    },
-                    SAR: { 
-                        SGD: 0.358 + (Math.random() * 0.001 - 0.0005), 
-                        MYR: 1.137 + (Math.random() * 0.005 - 0.0025),
-                        IDR: 4052.12 + (Math.random() * 5 - 2.5),
-                        USD: 0.267 + (Math.random() * 0.001 - 0.0005),
-                        SAR: 1 
-                    },
-                    USD: { 
-                        SGD: 1.351 + (Math.random() * 0.01 - 0.005), 
-                        MYR: 4.285 + (Math.random() * 0.02 - 0.01),
-                        IDR: 15280.50 + (Math.random() * 20 - 10),
-                        SAR: 3.75 + (Math.random() * 0.02 - 0.01),
-                        USD: 1 
-                    }
+                console.log('Using fallback demo rates with random changes');
+                
+                // Base rates for fallback
+                const baseRates = {
+                    SGD: { MYR: 3.1807, IDR: 11286.57, SAR: 2.79, USD: 0.74, SGD: 1 },
+                    MYR: { SGD: 0.3145, IDR: 3560.25, SAR: 0.88, USD: 0.234, MYR: 1 },
+                    IDR: { SGD: 0.0000886, MYR: 0.000281, SAR: 0.000247, USD: 0.000066, IDR: 1 },
+                    SAR: { SGD: 0.358, MYR: 1.137, IDR: 4052.12, USD: 0.267, SAR: 1 },
+                    USD: { SGD: 1.351, MYR: 4.285, IDR: 15280.50, SAR: 3.75, USD: 1 }
                 };
-                return demoRates[baseCurrency] || demoRates.SGD;
+                
+                // Get base rates
+                const base = baseRates[baseCurrency] || baseRates.SGD;
+                
+                // Create new rates with small random changes
+                const newRates = {};
+                for (const [currency, rate] of Object.entries(base)) {
+                    if (currency === baseCurrency) {
+                        newRates[currency] = 1;
+                    } else {
+                        newRates[currency] = generateRandomRate(rate);
+                    }
+                }
+                
+                return newRates;
             }
         }
 
@@ -506,14 +498,6 @@
                 // Fetch fresh rates
                 const newRates = await fetchExchangeRates(fromCurrency);
                 
-                // Store previous rates for comparison
-                if (currentRates[fromCurrency]) {
-                    lastRates[fromCurrency] = { ...currentRates[fromCurrency] };
-                }
-                
-                // Update current rates
-                currentRates[fromCurrency] = newRates;
-                
                 // Get all OTHER currencies
                 const targetCurrencies = currencies.filter(currency => currency !== fromCurrency);
                 
@@ -523,8 +507,8 @@
                     
                     // Calculate percentage change
                     let percentageChange = 0;
-                    if (lastRates[fromCurrency] && lastRates[fromCurrency][targetCurrency]) {
-                        const previousRate = lastRates[fromCurrency][targetCurrency];
+                    if (currentRates[fromCurrency] && currentRates[fromCurrency][targetCurrency]) {
+                        const previousRate = currentRates[fromCurrency][targetCurrency];
                         percentageChange = calculatePercentageChange(currentRate, previousRate);
                     }
                     
@@ -537,6 +521,9 @@
                         percentageChange: percentageChange
                     });
                 });
+                
+                // Store current rates as last rates for next comparison
+                currentRates[fromCurrency] = newRates;
                 
             } catch (error) {
                 console.error('Error in convertCurrency:', error);
@@ -610,6 +597,21 @@
             updateTimestamp();
         }
 
+        // Update timestamp every second
+        function updateTimestamp() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: true, 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('updateTime').textContent = timeString;
+        }
+
+        // Start clock update
+        setInterval(updateTimestamp, 1000);
+
         async function updateAndDisplay() {
             const fromCurrency = document.getElementById('fromCurrency').value;
             const amount = parseFloat(document.getElementById('amount').value) || 100;
@@ -624,17 +626,6 @@
             }
         }
 
-        function updateTimestamp() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('en-US', { 
-                hour12: true, 
-                hour: '2-digit', 
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            document.getElementById('updateTime').textContent = timeString;
-        }
-
         async function refreshRates() {
             const refreshBtn = document.getElementById('refreshBtn');
             const originalText = refreshBtn.textContent;
@@ -643,11 +634,6 @@
             refreshBtn.disabled = true;
             
             try {
-                // Clear cache to force fresh API call
-                const fromCurrency = document.getElementById('fromCurrency').value;
-                delete currentRates[fromCurrency];
-                delete lastRates[fromCurrency];
-                
                 await updateAndDisplay();
                 
                 // Show success feedback
