@@ -270,11 +270,37 @@
             background: #e2e8f0;
         }
 
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
         .timestamp {
             font-size: 13px;
             color: #64748b;
             text-align: center;
             margin-top: 20px;
+        }
+
+        .mode-indicator {
+            font-size: 12px;
+            color: #64748b;
+            text-align: center;
+            margin-top: 5px;
+            font-weight: 600;
         }
 
         @media (max-width: 768px) {
@@ -358,7 +384,7 @@
 
             <div class="timestamp">
                 Last updated: <span id="updateTime">--:--:-- --</span>
-                <br>
+                <div id="modeIndicator" class="mode-indicator">🔵 DEMO MODE - Using simulated rates (No API calls)</div>
                 <small>Live rates from ExchangeRate-API • Updates every 30 seconds</small>
             </div>
         </div>
@@ -380,6 +406,9 @@
             </div>
 
             <div class="controls">
+                <button class="btn btn-warning" id="modeBtn">
+                    🔄 Switch to Real Rates
+                </button>
                 <button class="btn btn-secondary" id="resetBtn">
                     Reset to SGD 100
                 </button>
@@ -391,6 +420,10 @@
     </div>
 
     <script>
+        // ========== CONFIGURATION ==========
+        let demoMode = true; // TRUE = Demo mode (no API calls), FALSE = Real API mode
+        // ========== END CONFIGURATION ==========
+
         // Your 5 currencies
         const currencies = ['SGD', 'MYR', 'IDR', 'SAR', 'USD'];
         
@@ -402,10 +435,10 @@
             USD: { name: "US Dollar", flag: "🇺🇸", symbol: "$" }
         };
 
-        // Store rates for comparison
-        let lastRates = {};
+        // Store rates
         let currentRates = {};
-        let autoRefreshInterval;
+        let rateCache = {};
+        let cacheDuration = 30 * 60 * 1000; // Cache for 30 minutes
 
         function formatCurrency(amount, currencyCode) {
             switch(currencyCode) {
@@ -444,50 +477,68 @@
             return `${percentage > 0 ? '+' : ''}${percentage.toFixed(2)}%`;
         }
 
-        function generateRandomRate(baseRate) {
-            // Generate small random change (±0.1% to ±0.5%)
-            const change = (Math.random() * 0.008) - 0.004;
+        function generateDemoRate(baseRate) {
+            const change = (Math.random() * 0.004) - 0.002;
             return baseRate * (1 + change);
         }
 
+        function getDemoRates(baseCurrency) {
+            const baseRates = {
+                SGD: { MYR: 3.1807, IDR: 11286.57, SAR: 2.79, USD: 0.74, SGD: 1 },
+                MYR: { SGD: 0.3145, IDR: 3560.25, SAR: 0.88, USD: 0.234, MYR: 1 },
+                IDR: { SGD: 0.0000886, MYR: 0.000281, SAR: 0.000247, USD: 0.000066, IDR: 1 },
+                SAR: { SGD: 0.358, MYR: 1.137, IDR: 4052.12, USD: 0.267, SAR: 1 },
+                USD: { SGD: 1.351, MYR: 4.285, IDR: 15280.50, SAR: 3.75, USD: 1 }
+            };
+            
+            const base = baseRates[baseCurrency] || baseRates.SGD;
+            const newRates = {};
+            
+            for (const [currency, rate] of Object.entries(base)) {
+                if (currency === baseCurrency) {
+                    newRates[currency] = 1;
+                } else {
+                    newRates[currency] = generateDemoRate(rate);
+                }
+            }
+            
+            return newRates;
+        }
+
         async function fetchExchangeRates(baseCurrency) {
+            // DEMO MODE: Use demo rates (no API calls)
+            if (demoMode) {
+                return getDemoRates(baseCurrency);
+            }
+            
+            // REAL MODE: Check cache first
+            const cacheKey = baseCurrency;
+            const now = Date.now();
+            
+            if (rateCache[cacheKey] && (now - rateCache[cacheKey].timestamp) < cacheDuration) {
+                return rateCache[cacheKey].rates;
+            }
+            
             try {
-                // This calls YOUR Netlify function
+                // Call Netlify function (real API)
                 const response = await fetch(`/.netlify/functions/get-rates?base=${baseCurrency}`);
                 const data = await response.json();
                 
-                // If API fails, use fallback with random changes
                 if (data.fallback || !data.conversion_rates) {
-                    throw new Error('Using fallback');
+                    throw new Error('API returned fallback');
                 }
                 
-                return data.conversion_rates;
-            } catch (error) {
-                console.log('Using fallback demo rates with random changes');
-                
-                // Base rates for fallback
-                const baseRates = {
-                    SGD: { MYR: 3.1807, IDR: 11286.57, SAR: 2.79, USD: 0.74, SGD: 1 },
-                    MYR: { SGD: 0.3145, IDR: 3560.25, SAR: 0.88, USD: 0.234, MYR: 1 },
-                    IDR: { SGD: 0.0000886, MYR: 0.000281, SAR: 0.000247, USD: 0.000066, IDR: 1 },
-                    SAR: { SGD: 0.358, MYR: 1.137, IDR: 4052.12, USD: 0.267, SAR: 1 },
-                    USD: { SGD: 1.351, MYR: 4.285, IDR: 15280.50, SAR: 3.75, USD: 1 }
+                // Cache the response
+                rateCache[cacheKey] = {
+                    rates: data.conversion_rates,
+                    timestamp: now
                 };
                 
-                // Get base rates
-                const base = baseRates[baseCurrency] || baseRates.SGD;
+                return data.conversion_rates;
                 
-                // Create new rates with small random changes
-                const newRates = {};
-                for (const [currency, rate] of Object.entries(base)) {
-                    if (currency === baseCurrency) {
-                        newRates[currency] = 1;
-                    } else {
-                        newRates[currency] = generateRandomRate(rate);
-                    }
-                }
-                
-                return newRates;
+            } catch (error) {
+                // If API fails, use demo rates
+                return getDemoRates(baseCurrency);
             }
         }
 
@@ -495,17 +546,13 @@
             const results = [];
             
             try {
-                // Fetch fresh rates
                 const newRates = await fetchExchangeRates(fromCurrency);
-                
-                // Get all OTHER currencies
                 const targetCurrencies = currencies.filter(currency => currency !== fromCurrency);
                 
                 targetCurrencies.forEach(targetCurrency => {
                     const currentRate = newRates[targetCurrency];
                     const convertedAmount = amount * currentRate;
                     
-                    // Calculate percentage change
                     let percentageChange = 0;
                     if (currentRates[fromCurrency] && currentRates[fromCurrency][targetCurrency]) {
                         const previousRate = currentRates[fromCurrency][targetCurrency];
@@ -522,16 +569,12 @@
                     });
                 });
                 
-                // Store current rates as last rates for next comparison
                 currentRates[fromCurrency] = newRates;
                 
             } catch (error) {
-                console.error('Error in convertCurrency:', error);
-                
                 // Fallback calculation
                 const targetCurrencies = currencies.filter(currency => currency !== fromCurrency);
                 targetCurrencies.forEach(targetCurrency => {
-                    // Use hardcoded rates as fallback
                     const hardcodedRates = {
                         SGD: { MYR: 3.1807, IDR: 11286.57, SAR: 2.79, USD: 0.74 },
                         MYR: { SGD: 0.3145, IDR: 3560.25, SAR: 0.88, USD: 0.234 },
@@ -597,7 +640,6 @@
             updateTimestamp();
         }
 
-        // Update timestamp every second
         function updateTimestamp() {
             const now = new Date();
             const timeString = now.toLocaleTimeString('en-US', { 
@@ -609,7 +651,6 @@
             document.getElementById('updateTime').textContent = timeString;
         }
 
-        // Start clock update
         setInterval(updateTimestamp, 1000);
 
         async function updateAndDisplay() {
@@ -620,7 +661,6 @@
                 const results = await convertCurrency(fromCurrency, amount);
                 updateDisplay(results);
             } catch (error) {
-                console.error('Error updating display:', error);
                 document.getElementById('results').innerHTML = 
                     '<div style="text-align: center; padding: 20px; color: #dc2626;">Error loading exchange rates. Using demo data.</div>';
             }
@@ -636,7 +676,6 @@
             try {
                 await updateAndDisplay();
                 
-                // Show success feedback
                 refreshBtn.textContent = '✓ Rates Updated!';
                 refreshBtn.style.background = '#10b981';
                 
@@ -664,11 +703,35 @@
             updateAndDisplay();
         }
 
+        function toggleMode() {
+            demoMode = !demoMode;
+            const modeBtn = document.getElementById('modeBtn');
+            const modeIndicator = document.getElementById('modeIndicator');
+            
+            if (demoMode) {
+                modeBtn.textContent = '🔄 Switch to Real Rates';
+                modeBtn.className = 'btn btn-warning';
+                modeIndicator.textContent = '🔵 DEMO MODE - Using simulated rates (No API calls)';
+                modeIndicator.style.color = '#f59e0b';
+            } else {
+                modeBtn.textContent = '🔄 Switch to Demo Mode';
+                modeBtn.className = 'btn btn-success';
+                modeIndicator.textContent = '✅ REAL MODE - Using live API rates';
+                modeIndicator.style.color = '#10b981';
+            }
+            
+            // Clear cache and refresh
+            rateCache = {};
+            currentRates = {};
+            refreshRates();
+        }
+
         // Initialize event listeners
         document.getElementById('fromCurrency').addEventListener('change', updateAndDisplay);
         document.getElementById('amount').addEventListener('input', updateAndDisplay);
         document.getElementById('refreshBtn').addEventListener('click', refreshRates);
         document.getElementById('resetBtn').addEventListener('click', resetToDefault);
+        document.getElementById('modeBtn').addEventListener('click', toggleMode);
 
         // Initial display
         updateAndDisplay();
