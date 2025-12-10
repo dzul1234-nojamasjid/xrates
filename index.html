@@ -422,6 +422,10 @@
     <script>
         // ========== CONFIGURATION ==========
         let demoMode = true; // TRUE = Demo mode (no API calls), FALSE = Real API mode
+        let realModeTimer = null;
+        let realModeDuration = 5 * 60 * 1000; // AUTO SWITCH BACK after 5 minutes
+        let apiCallCount = 0;
+        let maxApiCalls = 50; // Maximum API calls per session
         // ========== END CONFIGURATION ==========
 
         // Your 5 currencies
@@ -511,7 +515,14 @@
                 return getDemoRates(baseCurrency);
             }
             
-            // REAL MODE: Check cache first
+            // REAL MODE: Check if we've exceeded max API calls
+            if (apiCallCount >= maxApiCalls) {
+                console.log('Maximum API calls reached, switching to demo mode');
+                autoSwitchToDemoMode();
+                return getDemoRates(baseCurrency);
+            }
+            
+            // Check cache first
             const cacheKey = baseCurrency;
             const now = Date.now();
             
@@ -520,6 +531,10 @@
             }
             
             try {
+                // Count this API call
+                apiCallCount++;
+                console.log(`API Call #${apiCallCount} of ${maxApiCalls}`);
+                
                 // Call Netlify function (real API)
                 const response = await fetch(`/.netlify/functions/get-rates?base=${baseCurrency}`);
                 const data = await response.json();
@@ -541,6 +556,55 @@
                 return getDemoRates(baseCurrency);
             }
         }
+
+        function autoSwitchToDemoMode() {
+            if (!demoMode) {
+                demoMode = true;
+                updateModeDisplay();
+                showNotification('Auto-switched to DEMO mode to save API quota', 'warning');
+            }
+        }
+
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                background: ${type === 'warning' ? '#f59e0b' : '#10b981'};
+                color: white;
+                border-radius: 10px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                z-index: 1000;
+                font-weight: 600;
+                animation: slideIn 0.3s ease;
+            `;
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Add CSS for animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
 
         async function convertCurrency(fromCurrency, amount) {
             const results = [];
@@ -651,6 +715,23 @@
             document.getElementById('updateTime').textContent = timeString;
         }
 
+        function updateModeDisplay() {
+            const modeBtn = document.getElementById('modeBtn');
+            const modeIndicator = document.getElementById('modeIndicator');
+            
+            if (demoMode) {
+                modeBtn.textContent = '🔄 Switch to Real Rates';
+                modeBtn.className = 'btn btn-warning';
+                modeIndicator.textContent = `🔵 DEMO MODE - Using simulated rates (API calls: ${apiCallCount}/${maxApiCalls})`;
+                modeIndicator.style.color = '#f59e0b';
+            } else {
+                modeBtn.textContent = '🔄 Switch to Demo Mode';
+                modeBtn.className = 'btn btn-success';
+                modeIndicator.textContent = `✅ REAL MODE - Using live API (Calls: ${apiCallCount}/${maxApiCalls})`;
+                modeIndicator.style.color = '#10b981';
+            }
+        }
+
         setInterval(updateTimestamp, 1000);
 
         async function updateAndDisplay() {
@@ -703,21 +784,35 @@
             updateAndDisplay();
         }
 
-        function toggleMode() {
-            demoMode = !demoMode;
-            const modeBtn = document.getElementById('modeBtn');
-            const modeIndicator = document.getElementById('modeIndicator');
+        function switchToRealMode() {
+            demoMode = false;
+            updateModeDisplay();
+            showNotification('Switched to REAL mode. Will auto-switch back in 5 minutes.', 'info');
             
+            // Clear any existing timer
+            if (realModeTimer) {
+                clearTimeout(realModeTimer);
+            }
+            
+            // Set timer to auto-switch back to demo mode after 5 minutes
+            realModeTimer = setTimeout(() => {
+                autoSwitchToDemoMode();
+            }, realModeDuration);
+        }
+
+        function toggleMode() {
             if (demoMode) {
-                modeBtn.textContent = '🔄 Switch to Real Rates';
-                modeBtn.className = 'btn btn-warning';
-                modeIndicator.textContent = '🔵 DEMO MODE - Using simulated rates (No API calls)';
-                modeIndicator.style.color = '#f59e0b';
+                switchToRealMode();
             } else {
-                modeBtn.textContent = '🔄 Switch to Demo Mode';
-                modeBtn.className = 'btn btn-success';
-                modeIndicator.textContent = '✅ REAL MODE - Using live API rates';
-                modeIndicator.style.color = '#10b981';
+                demoMode = true;
+                updateModeDisplay();
+                showNotification('Switched to DEMO mode to save API quota', 'warning');
+                
+                // Clear timer if switching back manually
+                if (realModeTimer) {
+                    clearTimeout(realModeTimer);
+                    realModeTimer = null;
+                }
             }
             
             // Clear cache and refresh
@@ -735,6 +830,7 @@
 
         // Initial display
         updateAndDisplay();
+        updateModeDisplay();
 
         // Auto-refresh every 30 seconds
         setInterval(refreshRates, 30000);
