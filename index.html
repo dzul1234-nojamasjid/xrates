@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dzul's Live Currency Converter</title>
+    <style>
+        /* Your existing CSS remains exactly the same */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .converter-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 800px;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(to right, #4f46e5, #7c3aed);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .input-section {
+            background: #f8fafc;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .input-label {
+            font-weight: 600;
+            color: #475569;
+            font-size: 14px;
+            min-width: 140px;
+        }
+
+        .currency-select, .amount-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .currency-select:focus, .amount-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .currency-select {
+            background: white;
+            cursor: pointer;
+        }
+
+        .amount-input {
+            background: white;
+        }
+
+        .results-section {
+            display: grid;
+            gap: 15px;
+        }
+
+        .currency-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+
+        .currency-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .currency-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .currency-flag {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #4f46e5;
+            font-size: 20px;
+        }
+
+        .currency-details h3 {
+            font-size: 16px;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .currency-details p {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .conversion-result {
+            text-align: right;
+        }
+
+        .conversion-amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+
+        .percentage-change {
+            font-size: 14px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .positive {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .negative {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .neutral {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+
+        .arrow {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .arrow.up {
+            color: #16a34a;
+        }
+
+        .arrow.down {
+            color: #dc2626;
+        }
+
+        .arrow.neutral {
+            color: #0ea5e9;
+        }
+
+        .footer {
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            padding: 25px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .legend-icon {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #4338ca;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .timestamp {
+            font-size: 13px;
+            color: #64748b;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 25px;
+            }
+            
+            .input-group {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            
+            .input-label {
+                min-width: auto;
+            }
+            
+            .currency-card {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .conversion-result {
+                text-align: center;
+            }
+            
+            .footer {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .legend {
+                justify-content: center;
+            }
+            
+            .controls {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="converter-container">
+        <div class="header">
+            <h1>Dzul's Live Currency Converter</h1>
+            <div class="subtitle">Real-time exchange rates for your 5 selected currencies</div>
+        </div>
+
+        <div class="content">
+            <div class="input-section">
+                <div class="input-group">
+                    <label class="input-label">Convert From:</label>
+                    <select class="currency-select" id="fromCurrency">
+                        <option value="SGD">🇸🇬 Singapore Dollar (SGD)</option>
+                        <option value="MYR">🇲🇾 Malaysian Ringgit (MYR)</option>
+                        <option value="IDR">🇮🇩 Indonesian Rupiah (IDR)</option>
+                        <option value="SAR">🇸🇦 Saudi Riyal (SAR)</option>
+                        <option value="USD">🇺🇸 US Dollar (USD)</option>
+                    </select>
+                </div>
+                
+                <div class="input-group">
+                    <label class="input-label">Amount to Convert:</label>
+                    <input 
+                        type="number" 
+                        class="amount-input" 
+                        id="amount" 
+                        value="100" 
+                        min="0" 
+                        step="0.01"
+                        placeholder="Enter amount"
+                    >
+                </div>
+            </div>
+
+            <div class="results-section" id="results">
+                <!-- Results will be dynamically generated here -->
+                <div class="loading">Loading live exchange rates...</div>
+            </div>
+
+            <div class="timestamp">
+                Last updated: <span id="updateTime">--:--:-- --</span>
+                <br>
+                <small>Live rates from ExchangeRate-API • Updates every 30 seconds</small>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="legend">
+                <div class="legend-item">
+                    <span class="legend-icon" style="color: #16a34a;">↑</span>
+                    <span>Currency getting STRONGER</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-icon" style="color: #dc2626;">↓</span>
+                    <span>Currency getting WEAKER</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-icon" style="color: #0ea5e9;">→</span>
+                    <span>No change detected</span>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-secondary" id="resetBtn">
+                    Reset to SGD 100
+                </button>
+                <button class="btn btn-primary" id="refreshBtn">
+                    ↻ Refresh Live Rates
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== CONFIGURATION ==========
+        // Choose one option below:
+
+        // OPTION 1: ExchangeRate-API (1500 free requests/month)
+        const API_KEY = 'YOUR_EXCHANGERATE_API_KEY_HERE'; // Replace with your actual key
+        const BASE_URL = `https://v6.exchangerate-api.com/v6/${API_KEY}/latest/`;
+        
+        // OPTION 2: CurrencyFreaks (1000 free requests/month)
+        // const API_KEY = 'YOUR_CURRENCYFREAKS_API_KEY_HERE'; // Replace with your actual key
+        // const BASE_URL = `https://api.currencyfreaks.com/v2.0/rates/latest?apikey=${API_KEY}&symbols=`;
+        
+        // ========== END CONFIGURATION ==========
+
+        // Your 5 currencies
+        const currencies = ['SGD', 'MYR', 'IDR', 'SAR', 'USD'];
+        
+        const currencyData = {
+            SGD: {
+                name: "Singapore Dollar",
+                flag: "🇸🇬",
+                symbol: "S$"
+            },
+            MYR: {
+                name: "Malaysian Ringgit",
+                flag: "🇲🇾",
+                symbol: "RM"
+            },
+            IDR: {
+                name: "Indonesian Rupiah",
+                flag: "🇮🇩",
+                symbol: "Rp"
+            },
+            SAR: {
+                name: "Saudi Riyal",
+                flag: "🇸🇦",
+                symbol: "﷼"
+            },
+            USD: {
+                name: "US Dollar",
+                flag: "🇺🇸",
+                symbol: "$"
+            }
+        };
+
+        // Current exchange rates (will be populated from API)
+        let exchangeRates = {};
+        // Previous exchange rates (for calculating percentage change)
+        let previousRates = {};
+        // Track last update time
+        let lastUpdateTime = null;
+        // Store base currency rates
+        let cachedRates = {};
+
+        function formatCurrency(amount, currencyCode) {
+            const currency = currencyData[currencyCode];
+            
+            switch(currencyCode) {
+                case 'IDR':
+                    // Indonesian Rupiah - no decimal, comma as thousand separator
+                    return `Rp ${Math.round(amount).toLocaleString('id-ID')}`;
+                case 'MYR':
+                    // Malaysian Ringgit - 2 decimal places
+                    return `RM ${amount.toFixed(2)}`;
+                case 'SAR':
+                    // Saudi Riyal - 2 decimal places
+                    return `﷼ ${amount.toFixed(2)}`;
+                case 'USD':
+                    // US Dollar - 2 decimal places
+                    return `$${amount.toFixed(2)}`;
+                case 'SGD':
+                default:
+                    // Singapore Dollar - 2 decimal places
+                    return `S$${amount.toFixed(2)}`;
+            }
+        }
+
+        function calculatePercentageChange(current, previous) {
+            if (!previous || previous === 0) return 0;
+            return ((current - previous) / previous) * 100;
+        }
+
+        function getArrowAndClass(percentage) {
+            if (percentage > 0.01) {
+                return { arrow: '↑', arrowClass: 'up', changeClass: 'positive' };
+            } else if (percentage < -0.01) {
+                return { arrow: '↓', arrowClass: 'down', changeClass: 'negative' };
+            } else {
+                return { arrow: '→', arrowClass: 'neutral', changeClass: 'neutral' };
+            }
+        }
+
+        function formatPercentage(percentage) {
+            const absPercentage = Math.abs(percentage);
+            if (absPercentage < 0.01) return "0.00%";
+            return `${percentage > 0 ? '+' : ''}${percentage.toFixed(2)}%`;
+        }
+
+async function fetchExchangeRates(baseCurrency) {
+    try {
+        const response = await fetch(`/.netlify/functions/exchange-rates?baseCurrency=${baseCurrency}`);
+        const data = await response.json();
+        return data.conversion_rates;
+    } catch (error) {
+        // Fallback to demo rates
+        console.log('Using fallback rates');
+        const demoRates = { /* your demo rates */ };
+        return demoRates[baseCurrency];
+    }
+}
+                
+                // For ExchangeRate-API
+                const response = await fetch(`${BASE_URL}${baseCurrency}`);
+                
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.result === 'error') {
+                    throw new Error(data['error-type']);
+                }
+                
+                // Cache the rates with timestamp
+                cachedRates[baseCurrency] = {
+                    rates: data.conversion_rates,
+                    timestamp: Date.now()
+                };
+                
+                return data.conversion_rates;
+                
+            } catch (error) {
+                console.error('Error fetching exchange rates:', error);
+                
+                // Fallback to demo rates if API fails
+                const demoRates = {
+                    SGD: { MYR: 3.1807, IDR: 11286.57, SAR: 2.79, USD: 0.74, SGD: 1 },
+                    MYR: { SGD: 0.3145, IDR: 3560.25, SAR: 0.88, USD: 0.234, MYR: 1 },
+                    IDR: { SGD: 0.0000886, MYR: 0.000281, SAR: 0.000247, USD: 0.000066, IDR: 1 },
+                    SAR: { SGD: 0.358, MYR: 1.137, IDR: 4052.12, USD: 0.267, SAR: 1 },
+                    USD: { SGD: 1.351, MYR: 4.285, IDR: 15280.50, SAR: 3.75, USD: 1 }
+                };
+                
+                return demoRates[baseCurrency] || demoRates.SGD;
+            }
+        }
+
+        async function convertCurrency(fromCurrency, amount) {
+            const results = [];
+            
+            try {
+                // Fetch fresh rates for the base currency
+                const rates = await fetchExchangeRates(fromCurrency);
+                
+                // Store current rates as previous for next comparison
+                if (exchangeRates[fromCurrency]) {
+                    previousRates[fromCurrency] = { ...exchangeRates[fromCurrency] };
+                }
+                
+                // Update current rates
+                exchangeRates[fromCurrency] = rates;
+                
+                // Get all OTHER currencies (exclude the source currency)
+                const targetCurrencies = currencies.filter(currency => currency !== fromCurrency);
+                
+                targetCurrencies.forEach(targetCurrency => {
+                    const rate = rates[targetCurrency];
+                    const convertedAmount = amount * rate;
+                    
+                    // Calculate percentage change if we have previous rates
+                    let percentageChange = 0;
+                    if (previousRates[fromCurrency] && previousRates[fromCurrency][targetCurrency]) {
+                        percentageChange = calculatePercentageChange(
+                            rate, 
+                            previousRates[fromCurrency][targetCurrency]
+                        );
+                    }
+                    
+                    results.push({
+                        code: targetCurrency,
+                        name: currencyData[targetCurrency].name,
+                        flag: currencyData[targetCurrency].flag,
+                        amount: convertedAmount,
+                        rate: rate,
+                        percentageChange: percentageChange
+                    });
+                });
+                
+            } catch (error) {
+                console.error('Error in convertCurrency:', error);
+                
+                // Fallback calculation
+                const targetCurrencies = currencies.filter(currency => currency !== fromCurrency);
+                targetCurrencies.forEach(targetCurrency => {
+                    // Use hardcoded rates as fallback
+                    const hardcodedRates = {
+                        SGD: { MYR: 3.1807, IDR: 11286.57, SAR: 2.79, USD: 0.74 },
+                        MYR: { SGD: 0.3145, IDR: 3560.25, SAR: 0.88, USD: 0.234 },
+                        IDR: { SGD: 0.0000886, MYR: 0.000281, SAR: 0.000247, USD: 0.000066 },
+                        SAR: { SGD: 0.358, MYR: 1.137, IDR: 4052.12, USD: 0.267 },
+                        USD: { SGD: 1.351, MYR: 4.285, IDR: 15280.50, SAR: 3.75 }
+                    };
+                    
+                    const rate = hardcodedRates[fromCurrency][targetCurrency] || 1;
+                    const convertedAmount = amount * rate;
+                    
+                    results.push({
+                        code: targetCurrency,
+                        name: currencyData[targetCurrency].name,
+                        flag: currencyData[targetCurrency].flag,
+                        amount: convertedAmount,
+                        rate: rate,
+                        percentageChange: 0
+                    });
+                });
+            }
+            
+            return results;
+        }
+
+        function updateDisplay(results) {
+            const resultsContainer = document.getElementById('results');
+            
+            if (results.length === 0) {
+                resultsContainer.innerHTML = '<div class="loading">Loading exchange rates...</div>';
+                return;
+            }
+            
+            resultsContainer.innerHTML = '';
+            
+            results.forEach(result => {
+                const card = document.createElement('div');
+                card.className = 'currency-card';
+                
+                const { arrow, arrowClass, changeClass } = getArrowAndClass(result.percentageChange);
+                const percentageText = formatPercentage(result.percentageChange);
+                
+                card.innerHTML = `
+                    <div class="currency-info">
+                        <div class="currency-flag">${result.flag}</div>
+                        <div class="currency-details">
+                            <h3>${result.code}</h3>
+                            <p>${result.name}</p>
+                        </div>
+                    </div>
+                    <div class="conversion-result">
+                        <div class="conversion-amount">${formatCurrency(result.amount, result.code)}</div>
+                        <div class="percentage-change ${changeClass}">
+                            <span class="arrow ${arrowClass}">${arrow}</span>
+                            ${percentageText}
+                        </div>
+                    </div>
+                `;
+                
+                resultsContainer.appendChild(card);
+            });
+            
+            updateTimestamp();
+        }
+
+        async function updateAndDisplay() {
+            const fromCurrency = document.getElementById('fromCurrency').value;
+            const amount = parseFloat(document.getElementById('amount').value) || 100;
+            
+            try {
+                const results = await convertCurrency(fromCurrency, amount);
+                updateDisplay(results);
+            } catch (error) {
+                console.error('Error updating display:', error);
+                document.getElementById('results').innerHTML = 
+                    '<div style="text-align: center; padding: 20px; color: #dc2626;">Error loading exchange rates. Using demo data.</div>';
+            }
+        }
+
+        function updateTimestamp() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: true, 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('updateTime').textContent = timeString;
+            lastUpdateTime = now;
+        }
+
+        async function refreshRates() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const originalText = refreshBtn.textContent;
+            
+            refreshBtn.textContent = 'Loading...';
+            refreshBtn.disabled = true;
+            
+            try {
+                // Clear cache to force fresh API call
+                const fromCurrency = document.getElementById('fromCurrency').value;
+                delete cachedRates[fromCurrency];
+                
+                await updateAndDisplay();
+                
+                // Show success feedback
+                refreshBtn.textContent = '✓ Rates Updated!';
+                refreshBtn.style.background = '#10b981';
+                
+                setTimeout(() => {
+                    refreshBtn.textContent = originalText;
+                    refreshBtn.style.background = '';
+                    refreshBtn.disabled = false;
+                }, 2000);
+                
+            } catch (error) {
+                refreshBtn.textContent = '✗ Error';
+                refreshBtn.style.background = '#dc2626';
+                
+                setTimeout(() => {
+                    refreshBtn.textContent = originalText;
+                    refreshBtn.style.background = '';
+                    refreshBtn.disabled = false;
+                }, 2000);
+            }
+        }
+
+        function resetToDefault() {
+            document.getElementById('fromCurrency').value = 'SGD';
+            document.getElementById('amount').value = '100';
+            updateAndDisplay();
+        }
+
+        // Initialize event listeners
+        document.getElementById('fromCurrency').addEventListener('change', updateAndDisplay);
+        document.getElementById('amount').addEventListener('input', updateAndDisplay);
+        document.getElementById('refreshBtn').addEventListener('click', refreshRates);
+        document.getElementById('resetBtn').addEventListener('click', resetToDefault);
+
+        // Initial display
+        updateAndDisplay();
+
+        // Auto-refresh every 30 seconds
+        setInterval(refreshRates, 30000);
+    </script>
+</body>
+</html>
