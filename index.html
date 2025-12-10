@@ -393,19 +393,6 @@
     </div>
 
     <script>
-        // ========== CONFIGURATION ==========
-        // Choose one option below:
-
-        // OPTION 1: ExchangeRate-API (1500 free requests/month)
-        const API_KEY = 'YOUR_EXCHANGERATE_API_KEY_HERE'; // Replace with your actual key
-        const BASE_URL = `https://v6.exchangerate-api.com/v6/${API_KEY}/latest/`;
-        
-        // OPTION 2: CurrencyFreaks (1000 free requests/month)
-        // const API_KEY = 'YOUR_CURRENCYFREAKS_API_KEY_HERE'; // Replace with your actual key
-        // const BASE_URL = `https://api.currencyfreaks.com/v2.0/rates/latest?apikey=${API_KEY}&symbols=`;
-        
-        // ========== END CONFIGURATION ==========
-
         // Your 5 currencies
         const currencies = ['SGD', 'MYR', 'IDR', 'SAR', 'USD'];
         
@@ -441,9 +428,7 @@
         let exchangeRates = {};
         // Previous exchange rates (for calculating percentage change)
         let previousRates = {};
-        // Track last update time
-        let lastUpdateTime = null;
-        // Store base currency rates
+        // Store base currency rates cache
         let cachedRates = {};
 
         function formatCurrency(amount, currencyCode) {
@@ -490,57 +475,21 @@
             return `${percentage > 0 ? '+' : ''}${percentage.toFixed(2)}%`;
         }
 
-async function fetchExchangeRates(baseCurrency) {
-    try {
-        // This calls YOUR Netlify function, NOT the external API directly
-        const response = await fetch(`/.netlify/functions/get-rates?base=${baseCurrency}`);
-        const data = await response.json();
-        
-        // If API fails, use fallback
-        if (data.fallback) {
-            throw new Error('Using fallback');
-        }
-        
-        return data.conversion_rates;
-    } catch (error) {
-        console.log('Using fallback demo rates');
-        // Fallback to demo rates
-        const demoRates = {
-            SGD: { MYR: 3.1807, IDR: 11286.57, SAR: 2.79, USD: 0.74, SGD: 1 },
-            MYR: { SGD: 0.3145, IDR: 3560.25, SAR: 0.88, USD: 0.234, MYR: 1 },
-            IDR: { SGD: 0.0000886, MYR: 0.000281, SAR: 0.000247, USD: 0.000066, IDR: 1 },
-            SAR: { SGD: 0.358, MYR: 1.137, IDR: 4052.12, USD: 0.267, SAR: 1 },
-            USD: { SGD: 1.351, MYR: 4.285, IDR: 15280.50, SAR: 3.75, USD: 1 }
-        };
-        return demoRates[baseCurrency] || demoRates.SGD;
-    }
-}
-                
-                // For ExchangeRate-API
-                const response = await fetch(`${BASE_URL}${baseCurrency}`);
-                
-                if (!response.ok) {
-                    throw new Error(`API Error: ${response.status}`);
-                }
-                
+        async function fetchExchangeRates(baseCurrency) {
+            try {
+                // This calls YOUR Netlify function
+                const response = await fetch(`/.netlify/functions/get-rates?base=${baseCurrency}`);
                 const data = await response.json();
                 
-                if (data.result === 'error') {
-                    throw new Error(data['error-type']);
+                // If API fails, use fallback
+                if (data.fallback) {
+                    throw new Error('Using fallback');
                 }
                 
-                // Cache the rates with timestamp
-                cachedRates[baseCurrency] = {
-                    rates: data.conversion_rates,
-                    timestamp: Date.now()
-                };
-                
                 return data.conversion_rates;
-                
             } catch (error) {
-                console.error('Error fetching exchange rates:', error);
-                
-                // Fallback to demo rates if API fails
+                console.log('Using fallback demo rates');
+                // Fallback to demo rates
                 const demoRates = {
                     SGD: { MYR: 3.1807, IDR: 11286.57, SAR: 2.79, USD: 0.74, SGD: 1 },
                     MYR: { SGD: 0.3145, IDR: 3560.25, SAR: 0.88, USD: 0.234, MYR: 1 },
@@ -548,7 +497,6 @@ async function fetchExchangeRates(baseCurrency) {
                     SAR: { SGD: 0.358, MYR: 1.137, IDR: 4052.12, USD: 0.267, SAR: 1 },
                     USD: { SGD: 1.351, MYR: 4.285, IDR: 15280.50, SAR: 3.75, USD: 1 }
                 };
-                
                 return demoRates[baseCurrency] || demoRates.SGD;
             }
         }
@@ -689,7 +637,6 @@ async function fetchExchangeRates(baseCurrency) {
                 second: '2-digit'
             });
             document.getElementById('updateTime').textContent = timeString;
-            lastUpdateTime = now;
         }
 
         async function refreshRates() {
@@ -748,4 +695,3 @@ async function fetchExchangeRates(baseCurrency) {
     </script>
 </body>
 </html>
-
