@@ -1,12 +1,8 @@
 exports.handler = async function(event) {
-    // Your API key is SAFELY stored in Netlify environment variables
     const API_KEY = process.env.API_KEY;
-    
-    // Get the base currency from the request
     const { base = 'SGD' } = event.queryStringParameters;
     
     try {
-        // Call the real API with your hidden key
         const response = await fetch(`https://v6.exchangerate-api.com/v6/${API_KEY}/latest/${base}`);
         const data = await response.json();
         
