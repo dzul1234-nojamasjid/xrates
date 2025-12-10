@@ -492,14 +492,27 @@
 
 async function fetchExchangeRates(baseCurrency) {
     try {
-        const response = await fetch(`/.netlify/functions/exchange-rates?baseCurrency=${baseCurrency}`);
+        // This calls YOUR Netlify function, NOT the external API directly
+        const response = await fetch(`/.netlify/functions/get-rates?base=${baseCurrency}`);
         const data = await response.json();
+        
+        // If API fails, use fallback
+        if (data.fallback) {
+            throw new Error('Using fallback');
+        }
+        
         return data.conversion_rates;
     } catch (error) {
+        console.log('Using fallback demo rates');
         // Fallback to demo rates
-        console.log('Using fallback rates');
-        const demoRates = { /* your demo rates */ };
-        return demoRates[baseCurrency];
+        const demoRates = {
+            SGD: { MYR: 3.1807, IDR: 11286.57, SAR: 2.79, USD: 0.74, SGD: 1 },
+            MYR: { SGD: 0.3145, IDR: 3560.25, SAR: 0.88, USD: 0.234, MYR: 1 },
+            IDR: { SGD: 0.0000886, MYR: 0.000281, SAR: 0.000247, USD: 0.000066, IDR: 1 },
+            SAR: { SGD: 0.358, MYR: 1.137, IDR: 4052.12, USD: 0.267, SAR: 1 },
+            USD: { SGD: 1.351, MYR: 4.285, IDR: 15280.50, SAR: 3.75, USD: 1 }
+        };
+        return demoRates[baseCurrency] || demoRates.SGD;
     }
 }
                 
@@ -735,3 +748,4 @@ async function fetchExchangeRates(baseCurrency) {
     </script>
 </body>
 </html>
+
