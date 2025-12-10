@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dzul's Live Currency Converter</title>
     <style>
-        /* Your existing CSS remains exactly the same */
         * {
             margin: 0;
             padding: 0;
@@ -354,7 +353,6 @@
             </div>
 
             <div class="results-section" id="results">
-                <!-- Results will be dynamically generated here -->
                 <div class="loading">Loading live exchange rates...</div>
             </div>
 
@@ -397,59 +395,29 @@
         const currencies = ['SGD', 'MYR', 'IDR', 'SAR', 'USD'];
         
         const currencyData = {
-            SGD: {
-                name: "Singapore Dollar",
-                flag: "🇸🇬",
-                symbol: "S$"
-            },
-            MYR: {
-                name: "Malaysian Ringgit",
-                flag: "🇲🇾",
-                symbol: "RM"
-            },
-            IDR: {
-                name: "Indonesian Rupiah",
-                flag: "🇮🇩",
-                symbol: "Rp"
-            },
-            SAR: {
-                name: "Saudi Riyal",
-                flag: "🇸🇦",
-                symbol: "﷼"
-            },
-            USD: {
-                name: "US Dollar",
-                flag: "🇺🇸",
-                symbol: "$"
-            }
+            SGD: { name: "Singapore Dollar", flag: "🇸🇬", symbol: "S$" },
+            MYR: { name: "Malaysian Ringgit", flag: "🇲🇾", symbol: "RM" },
+            IDR: { name: "Indonesian Rupiah", flag: "🇮🇩", symbol: "Rp" },
+            SAR: { name: "Saudi Riyal", flag: "🇸🇦", symbol: "﷼" },
+            USD: { name: "US Dollar", flag: "🇺🇸", symbol: "$" }
         };
 
-        // Current exchange rates (will be populated from API)
-        let exchangeRates = {};
-        // Previous exchange rates (for calculating percentage change)
-        let previousRates = {};
-        // Store base currency rates cache
-        let cachedRates = {};
+        // Store rates for comparison
+        let lastRates = {};
+        let currentRates = {};
 
         function formatCurrency(amount, currencyCode) {
-            const currency = currencyData[currencyCode];
-            
             switch(currencyCode) {
                 case 'IDR':
-                    // Indonesian Rupiah - no decimal, comma as thousand separator
                     return `Rp ${Math.round(amount).toLocaleString('id-ID')}`;
                 case 'MYR':
-                    // Malaysian Ringgit - 2 decimal places
                     return `RM ${amount.toFixed(2)}`;
                 case 'SAR':
-                    // Saudi Riyal - 2 decimal places
                     return `﷼ ${amount.toFixed(2)}`;
                 case 'USD':
-                    // US Dollar - 2 decimal places
                     return `$${amount.toFixed(2)}`;
                 case 'SGD':
                 default:
-                    // Singapore Dollar - 2 decimal places
                     return `S$${amount.toFixed(2)}`;
             }
         }
@@ -489,13 +457,43 @@
                 return data.conversion_rates;
             } catch (error) {
                 console.log('Using fallback demo rates');
-                // Fallback to demo rates
+                // Fallback to demo rates with small random changes
                 const demoRates = {
-                    SGD: { MYR: 3.1807, IDR: 11286.57, SAR: 2.79, USD: 0.74, SGD: 1 },
-                    MYR: { SGD: 0.3145, IDR: 3560.25, SAR: 0.88, USD: 0.234, MYR: 1 },
-                    IDR: { SGD: 0.0000886, MYR: 0.000281, SAR: 0.000247, USD: 0.000066, IDR: 1 },
-                    SAR: { SGD: 0.358, MYR: 1.137, IDR: 4052.12, USD: 0.267, SAR: 1 },
-                    USD: { SGD: 1.351, MYR: 4.285, IDR: 15280.50, SAR: 3.75, USD: 1 }
+                    SGD: { 
+                        MYR: 3.1807 + (Math.random() * 0.01 - 0.005), 
+                        IDR: 11286.57 + (Math.random() * 10 - 5),
+                        SAR: 2.79 + (Math.random() * 0.01 - 0.005),
+                        USD: 0.74 + (Math.random() * 0.01 - 0.005),
+                        SGD: 1 
+                    },
+                    MYR: { 
+                        SGD: 0.3145 + (Math.random() * 0.001 - 0.0005), 
+                        IDR: 3560.25 + (Math.random() * 5 - 2.5),
+                        SAR: 0.88 + (Math.random() * 0.005 - 0.0025),
+                        USD: 0.234 + (Math.random() * 0.005 - 0.0025),
+                        MYR: 1 
+                    },
+                    IDR: { 
+                        SGD: 0.0000886 + (Math.random() * 0.000001 - 0.0000005), 
+                        MYR: 0.000281 + (Math.random() * 0.000001 - 0.0000005),
+                        SAR: 0.000247 + (Math.random() * 0.000001 - 0.0000005),
+                        USD: 0.000066 + (Math.random() * 0.000001 - 0.0000005),
+                        IDR: 1 
+                    },
+                    SAR: { 
+                        SGD: 0.358 + (Math.random() * 0.001 - 0.0005), 
+                        MYR: 1.137 + (Math.random() * 0.005 - 0.0025),
+                        IDR: 4052.12 + (Math.random() * 5 - 2.5),
+                        USD: 0.267 + (Math.random() * 0.001 - 0.0005),
+                        SAR: 1 
+                    },
+                    USD: { 
+                        SGD: 1.351 + (Math.random() * 0.01 - 0.005), 
+                        MYR: 4.285 + (Math.random() * 0.02 - 0.01),
+                        IDR: 15280.50 + (Math.random() * 20 - 10),
+                        SAR: 3.75 + (Math.random() * 0.02 - 0.01),
+                        USD: 1 
+                    }
                 };
                 return demoRates[baseCurrency] || demoRates.SGD;
             }
@@ -505,31 +503,29 @@
             const results = [];
             
             try {
-                // Fetch fresh rates for the base currency
-                const rates = await fetchExchangeRates(fromCurrency);
+                // Fetch fresh rates
+                const newRates = await fetchExchangeRates(fromCurrency);
                 
-                // Store current rates as previous for next comparison
-                if (exchangeRates[fromCurrency]) {
-                    previousRates[fromCurrency] = { ...exchangeRates[fromCurrency] };
+                // Store previous rates for comparison
+                if (currentRates[fromCurrency]) {
+                    lastRates[fromCurrency] = { ...currentRates[fromCurrency] };
                 }
                 
                 // Update current rates
-                exchangeRates[fromCurrency] = rates;
+                currentRates[fromCurrency] = newRates;
                 
-                // Get all OTHER currencies (exclude the source currency)
+                // Get all OTHER currencies
                 const targetCurrencies = currencies.filter(currency => currency !== fromCurrency);
                 
                 targetCurrencies.forEach(targetCurrency => {
-                    const rate = rates[targetCurrency];
-                    const convertedAmount = amount * rate;
+                    const currentRate = newRates[targetCurrency];
+                    const convertedAmount = amount * currentRate;
                     
-                    // Calculate percentage change if we have previous rates
+                    // Calculate percentage change
                     let percentageChange = 0;
-                    if (previousRates[fromCurrency] && previousRates[fromCurrency][targetCurrency]) {
-                        percentageChange = calculatePercentageChange(
-                            rate, 
-                            previousRates[fromCurrency][targetCurrency]
-                        );
+                    if (lastRates[fromCurrency] && lastRates[fromCurrency][targetCurrency]) {
+                        const previousRate = lastRates[fromCurrency][targetCurrency];
+                        percentageChange = calculatePercentageChange(currentRate, previousRate);
                     }
                     
                     results.push({
@@ -537,7 +533,7 @@
                         name: currencyData[targetCurrency].name,
                         flag: currencyData[targetCurrency].flag,
                         amount: convertedAmount,
-                        rate: rate,
+                        rate: currentRate,
                         percentageChange: percentageChange
                     });
                 });
@@ -649,7 +645,8 @@
             try {
                 // Clear cache to force fresh API call
                 const fromCurrency = document.getElementById('fromCurrency').value;
-                delete cachedRates[fromCurrency];
+                delete currentRates[fromCurrency];
+                delete lastRates[fromCurrency];
                 
                 await updateAndDisplay();
                 
